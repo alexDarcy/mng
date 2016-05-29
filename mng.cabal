@@ -3,8 +3,8 @@
 
 name:                mng
 version:             0.1.0.0
--- synopsis:            
--- description:         
+synopsis:            Command-line utility to manage your list of movies, comics, TV shows.
+description:         Allow to list, export or add entries to your lists. 
 license:             BSD3
 license-file:        LICENSE
 author:              Alexis Praga
@@ -14,13 +14,16 @@ category:            Web
 build-type:          Simple
 extra-source-files:  README
 cabal-version:       >=1.10
+data-files:          css/*.css
 
 library 
   hs-source-dirs:      src
-  exposed-modules:     Movies
+  exposed-modules:     GenericEntries
   build-depends:       base >=4.8 && <4.9,
-                       cassava, 
-                       text
+                       cassava,
+                       raw-strings-qq,
+                       text,
+                       vector
   default-language:    Haskell2010
 
 
@@ -33,6 +36,7 @@ executable mng
                        cassava, cmdargs  >=0.10 && <0.11,
                        directory,
                        filepath,
+                       raw-strings-qq,
                        text,
                        vector
   hs-source-dirs:      src

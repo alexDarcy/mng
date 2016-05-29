@@ -5,26 +5,16 @@ import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString.Char8 as C
 import Data.Csv
 import Data.List (sort, insert)
-import Data.Maybe
-import Data.Text
-import Data.Vector as V
-import Prelude as P
+import Data.Maybe 
+import qualified Data.Text as T
+import qualified Data.Vector as V
 import System.Console.CmdArgs
-import System.Directory ( createDirectoryIfMissing, doesFileExist )
+import System.Directory 
 import System.Environment (getArgs, withArgs, getEnv)
 import System.FilePath.Posix ((</>))
 import GHC.Generics
-import Movies 
-
-data EntityType = Movie | Comic
-  deriving (Data, Typeable)
-
-instance Default EntityType where
-  def = Movie
-
-instance Show EntityType where
-  show Movie = "movie"
-  show Comic = "comic"
+import GenericEntries 
+import Paths_mng
 
 data MovieArgs  = AddEntry 
                  { eType :: EntityType
@@ -36,7 +26,15 @@ data MovieArgs  = AddEntry
                  }
                  | ListEntries 
                  { eType :: EntityType }
+                 | ExportEntries
+                 { eType :: EntityType
+                 , out :: String 
+                 }
   deriving (Show, Data, Typeable)
+
+instance Default EntityType where
+  def = Movie
+
 
 --type MovieArgs = GenericArgs String
 
@@ -56,15 +54,21 @@ list = ListEntries {}
         &= help "List all entries"
         &= name "list"
 
+-- We do not need to repeat eType
+export = ExportEntries { out = "html" &= typ "DIR" }
+        &= help "Export to HTML"
+        &= name "export"
+
+
 insertEntry :: Entry -> [Entry] -> Maybe [Entry]
 insertEntry e l  
-  | e `P.elem` l = Nothing
+  | e `elem` l = Nothing
   | otherwise    = Just $ insert e l
 
 process :: MovieArgs -> (Header, V.Vector Entry) -> IO()
 process (AddEntry etype s t y r st) (header, entries) = do
-  let entry' = fmap pack (Entry t s y r st)
-  let entries' = sort . toList $ entries
+  let entry' = fmap T.pack (Entry t s y r st)
+  let entries' = sort . V.toList $ entries
   let newEntries = insertEntry entry' entries'
   when (isNothing newEntries) $ error "Entry already in list"
   let newEntries' = encodeByName header (fromJust newEntries)
@@ -72,10 +76,24 @@ process (AddEntry etype s t y r st) (header, entries) = do
   B.writeFile file newEntries'
   putStrLn "Entry added"
 process (ListEntries _) (_, vector) = V.mapM_ print vector
+process (ExportEntries etype dir ) (_, vector) = createHTML etype dir vector
 
+copyCSS :: String -> FilePath -> IO()
+copyCSS cssFile dir = do
+  src <- getDataFileName $ "css" </> cssFile
+  let dir' = dir </> "css"
+  createDirectoryIfMissing False dir'
+  copyFile src (dir' </> cssFile)
 
-getOpts = cmdArgs $ modes [add , list ]
-  &= summary "Manage movies on the command-line."
+createHTML :: EntityType -> String -> V.Vector Entry -> IO()
+createHTML etype dir vector  = do
+  let file = show etype ++ "s.html"
+  createDirectoryIfMissing False dir
+  writeFile (dir </> file) (htmlContent etype vector)
+  mapM_ (`copyCSS` dir) ["style.css"]
+ 
+getOpts = cmdArgs $ modes [add , list, export ]
+  &= summary "Manage movies, comics on the command-line."
   &= program "mng"
 
 getFilePath :: EntityType  -> IO FilePath
@@ -83,9 +101,9 @@ getFilePath etype = do
   home <- getEnv "HOME"
   let dir = home </> ".mng"
   createDirectoryIfMissing False dir
-  return $ dir </> (show etype P.++ "s.csv")
+  return $ dir </> (show etype ++ "s.csv")
 
-defaultHeader = V.fromList $ P.map C.pack ["title", "serie", "rating", "status", "year"]
+defaultHeader = V.fromList $ map C.pack ["title", "serie", "rating", "status", "year"]
 
 readData file = do
   input <- B.readFile file
@@ -100,5 +118,5 @@ getData file = do
 main = do
   -- Print help message when no argument
   args <- getArgs
-  mode <- (if P.null args then withArgs ["--help"] else id) getOpts
+  mode <- (if null args then withArgs ["--help"] else id) getOpts
   getFilePath (eType mode) >>= getData >>= process mode
