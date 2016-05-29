@@ -83,14 +83,12 @@ getFilePath etype = do
   home <- getEnv "HOME"
   let dir = home </> ".mng"
   createDirectoryIfMissing False dir
-  print $ dir </> (show etype P.++ "s.csv")
   return $ dir </> (show etype P.++ "s.csv")
 
 defaultHeader = V.fromList $ P.map C.pack ["title", "serie", "rating", "status", "year"]
 
 readData file = do
   input <- B.readFile file
-  print "readign file"
   return $ case decodeByName input :: Either String (Header, V.Vector Entry) of
                   Left a -> error a
                   Right b -> b
@@ -103,5 +101,4 @@ main = do
   -- Print help message when no argument
   args <- getArgs
   mode <- (if P.null args then withArgs ["--help"] else id) getOpts
-  let etype = eType mode
-  getFilePath etype >>= getData >>= process mode
+  getFilePath (eType mode) >>= getData >>= process mode
