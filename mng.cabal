@@ -17,9 +17,11 @@ cabal-version:       >=1.10
 
 library 
   hs-source-dirs:      src
-  exposed-modules:     Movies
+  exposed-modules:     GenericEntries
   build-depends:       base >=4.8 && <4.9,
-                       cassava, 
+                       cassava,
+                       --data-default,
+                       raw-strings-qq,
                        text
   default-language:    Haskell2010
 
@@ -33,6 +35,7 @@ executable mng
                        cassava, cmdargs  >=0.10 && <0.11,
                        directory,
                        filepath,
+                       raw-strings-qq,
                        text,
                        vector
   hs-source-dirs:      src

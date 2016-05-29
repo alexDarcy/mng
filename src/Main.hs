@@ -14,17 +14,7 @@ import System.Directory ( createDirectoryIfMissing, doesFileExist )
 import System.Environment (getArgs, withArgs, getEnv)
 import System.FilePath.Posix ((</>))
 import GHC.Generics
-import Movies 
-
-data EntityType = Movie | Comic
-  deriving (Data, Typeable)
-
-instance Default EntityType where
-  def = Movie
-
-instance Show EntityType where
-  show Movie = "movie"
-  show Comic = "comic"
+import GenericEntries 
 
 data MovieArgs  = AddEntry 
                  { eType :: EntityType
@@ -36,7 +26,15 @@ data MovieArgs  = AddEntry
                  }
                  | ListEntries 
                  { eType :: EntityType }
+                 | ExportEntries
+                 { eType :: EntityType
+                 , out :: String 
+                 }
   deriving (Show, Data, Typeable)
+
+instance Default EntityType where
+  def = Movie
+
 
 --type MovieArgs = GenericArgs String
 
@@ -56,6 +54,12 @@ list = ListEntries {}
         &= help "List all entries"
         &= name "list"
 
+-- We do not need to repeat eType
+export = ExportEntries { out = def &= typ "FILE" }
+        &= help "Export to HTML"
+        &= name "export"
+
+
 insertEntry :: Entry -> [Entry] -> Maybe [Entry]
 insertEntry e l  
   | e `P.elem` l = Nothing
@@ -72,10 +76,16 @@ process (AddEntry etype s t y r st) (header, entries) = do
   B.writeFile file newEntries'
   putStrLn "Entry added"
 process (ListEntries _) (_, vector) = V.mapM_ print vector
+process (ExportEntries etype out ) (_, vector) = writeHTML etype out vector
 
-
-getOpts = cmdArgs $ modes [add , list ]
-  &= summary "Manage movies on the command-line."
+writeHTML etype file vector = 
+  writeFile file ( htmlHeader 
+                  P.++ htmlTitle etype
+                  P.++ printHTML $ V.toList vector
+                  P.++ htmlFooter)
+ 
+getOpts = cmdArgs $ modes [add , list, export ]
+  &= summary "Manage movies, comics on the command-line."
   &= program "mng"
 
 getFilePath :: EntityType  -> IO FilePath
