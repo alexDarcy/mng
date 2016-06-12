@@ -1,10 +1,11 @@
+![Build status](https://travis-ci.org/alexDarcy/mng.svg?branch=travis)
+
 ## Installation
 
-You will need cabal :
+Install stack then run:
 
-    cabal sandbox init
-    cabal install -j4
-The binary will in the sandbox (`.cabal/bin/mng`).
+  stack build
+  stack install
 
 ## Usage
 

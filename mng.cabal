@@ -13,13 +13,13 @@ maintainer:          alexis.praga@free.fr
 category:            Web
 build-type:          Simple
 extra-source-files:  README
-cabal-version:       >=1.10
+cabal-version:       >=1.18
 data-files:          css/*.css
 
 library 
   hs-source-dirs:      src
   exposed-modules:     GenericEntries
-  build-depends:       base >=4.8 && <4.9,
+  build-depends:       base >=4.6 && < 5,
                        cassava,
                        raw-strings-qq,
                        text,
@@ -31,9 +31,10 @@ executable mng
   main-is:             Main.hs
   -- other-modules:       
   other-extensions:    DeriveGeneric, DeriveDataTypeable
-  build-depends:       base >=4.8 && <4.9,
+  build-depends:       base >=4.6 && < 5,
                        bytestring, 
-                       cassava, cmdargs  >=0.10 && <0.11,
+                       cassava, 
+                       cmdargs,
                        directory,
                        filepath,
                        raw-strings-qq,
