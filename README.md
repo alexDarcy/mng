@@ -4,8 +4,8 @@
 
 Install stack then run:
 
-  stack build
-  stack install
+    stack build
+    stack install
 
 ## Usage
 
@@ -23,4 +23,4 @@ You can also set the serie (for comics), rating or year :
 
 ## Technical details
 
-Data is stored in $HOME/.mng/movies.csv, $HOME/.mng/comics.csv
+Data is stored in `$HOME/.mng/TYPE.csv` where `TYPE=movie, comics`.
