@@ -4,7 +4,7 @@ import Control.Monad (when, unless)
 import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString.Char8 as C
 import Data.Csv
-import Data.List (sort, insert)
+import Data.List (sort, insert, elemIndex)
 import Data.Maybe 
 import qualified Data.Text as T
 import qualified Data.Vector as V
@@ -15,6 +15,7 @@ import System.FilePath.Posix ((</>))
 import GHC.Generics
 import GenericEntries 
 import Paths_mng
+import Debug.Trace
 
 data MovieArgs  = AddEntry 
                  { eType :: EntityType
@@ -59,22 +60,34 @@ export = ExportEntries { out = "html" &= typ "DIR" }
         &= help "Export to HTML"
         &= name "export"
 
+-- Return the index of the entry with the same title if it exists
+indexPrevious :: Entry -> [Entry] -> Maybe Int
+indexPrevious e l 
+  | not (null match) = elemIndex (head match) l
+  | otherwise = Nothing
+  where match = filter (\x -> title e == title x) l
 
-insertEntry :: Entry -> [Entry] -> Maybe [Entry]
+-- Insert new element or update previous element with the same title
+insertEntry :: Entry -> [Entry] -> (Maybe [Entry], String)
 insertEntry e l  
-  | e `elem` l = Nothing
-  | otherwise    = Just $ insert e l
+  | e `elem` l = (Nothing, "Entry already exists")
+  | isJust i = (Just l', "Entry updated")
+  | otherwise = (Just $ insert e l, "Entry added")
+  where 
+    i = indexPrevious e l
+    (l1, l2) = splitAt (fromJust i) l
+    l' = l1 ++ [e] ++ tail l2
 
 process :: MovieArgs -> (Header, V.Vector Entry) -> IO()
 process (AddEntry etype s t y r st) (header, entries) = do
   let entry' = fmap T.pack (Entry t s y r st)
   let entries' = sort . V.toList $ entries
-  let newEntries = insertEntry entry' entries'
-  when (isNothing newEntries) $ error "Entry already in list"
+  let (newEntries, mesg) = insertEntry entry' entries' 
+  when (isNothing newEntries) $ error mesg
+  putStrLn mesg
   let newEntries' = encodeByName header (fromJust newEntries)
   file <- getFilePath etype 
   B.writeFile file newEntries'
-  putStrLn "Entry added"
 process (ListEntries _) (_, vector) = V.mapM_ print vector
 process (ExportEntries etype dir ) (_, vector) = createHTML etype dir vector
 
