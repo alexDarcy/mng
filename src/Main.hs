@@ -25,6 +25,13 @@ data MovieArgs  = AddEntry
                  , eStatus :: String
                  , eYear :: String
                  }
+                 | RemoveEntry
+                 { eType :: EntityType
+                 , eSerie :: String
+                 , eTitle :: String
+                 , eRating :: String
+                 , eYear :: String
+                 }
                  | ListEntries 
                  { eType :: EntityType }
                  | ExportEntries
@@ -36,9 +43,6 @@ data MovieArgs  = AddEntry
 instance Default EntityType where
   def = Movie
 
-
---type MovieArgs = GenericArgs String
-
 add = AddEntry 
       { eType = def  &= typ "[movie|comic]" &= argPos 0
       , eTitle = def  &= typ "title" &= argPos 1
@@ -49,6 +53,11 @@ add = AddEntry
       } 
         &= help "Adding an entry"
         &= name "add"
+
+-- We do not need to repeat eType
+remove = RemoveEntry {}
+        &= help "Removing an entry"
+        &= name "remove"
 
 -- We do not need to repeat eType
 list = ListEntries {}
@@ -78,16 +87,38 @@ insertEntry e l
     (l1, l2) = splitAt (fromJust i) l
     l' = l1 ++ [e] ++ tail l2
 
-process :: MovieArgs -> (Header, V.Vector Entry) -> IO()
-process (AddEntry etype s t y r st) (header, entries) = do
-  let entry' = fmap T.pack (Entry t s y r st)
-  let entries' = sort . V.toList $ entries
-  let (newEntries, mesg) = insertEntry entry' entries' 
+-- Remove element by title
+removeEntry :: Entry -> [Entry] -> (Maybe [Entry], String)
+removeEntry e l  
+  | isJust i = (Just l', "Entry removed")
+  | otherwise = (Just $ insert e l, "Entry added")
+  where 
+    i = indexPrevious e l
+    (l1, l2) = splitAt (fromJust i) l
+    l' = l1 ++ tail l2
+
+
+sortAll = sort . V.toList 
+
+writeAll (newEntries, mesg) etype header = do
   when (isNothing newEntries) $ error mesg
   putStrLn mesg
   let newEntries' = encodeByName header (fromJust newEntries)
   file <- getFilePath etype 
   B.writeFile file newEntries'
+
+updateEntries f entry entries etype header = do
+  let entry' = fmap T.pack entry
+  let (newEntries, mesg) = f entry' (sortAll entries)
+  writeAll (newEntries, mesg) etype header
+
+process :: MovieArgs -> (Header, V.Vector Entry) -> IO()
+process (AddEntry etype s t y r st) (header, entries) = do
+  let entry = Entry t s y r st
+  updateEntries insertEntry entry entries etype header
+process (RemoveEntry etype s t y r) (header, entries) = do
+  let entry = Entry t s y r ""
+  updateEntries removeEntry entry entries etype header
 process (ListEntries _) (_, vector) = V.mapM_ print vector
 process (ExportEntries etype dir ) (_, vector) = createHTML etype dir vector
 
@@ -105,7 +136,7 @@ createHTML etype dir vector  = do
   writeFile (dir </> file) (htmlContent etype vector)
   mapM_ (`copyCSS` dir) ["style.css"]
  
-getOpts = cmdArgs $ modes [add , list, export ]
+getOpts = cmdArgs $ modes [add , remove, list, export ]
   &= summary "Manage movies, comics on the command-line."
   &= program "mng"
 
