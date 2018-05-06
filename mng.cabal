@@ -19,7 +19,7 @@ data-files:          css/*.css
 library 
   hs-source-dirs:      src
   exposed-modules:     GenericEntries
-  build-depends:       base >=4.6 && < 5,
+  build-depends:       base ,
                        cassava,
                        raw-strings-qq,
                        text,
@@ -31,7 +31,7 @@ executable mng
   main-is:             Main.hs
   -- other-modules:       
   other-extensions:    DeriveGeneric, DeriveDataTypeable
-  build-depends:       base >=4.6 && < 5,
+  build-depends:       base ,
                        bytestring, 
                        cassava, 
                        cmdargs,
